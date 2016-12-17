@@ -11,13 +11,18 @@ class TestWindowModule : public imga::Module {
 };
 
 
+DWORD WINAPI thread(LPVOID) {
+	if (!imga::Initialize(*(HWND*)0xa377a8))
+		return FALSE;
+	imga::AddModule(new TestWindowModule());
+	return 0;
+}
+
 
 DWORD WINAPI DllMain(HMODULE mod, DWORD reason, LPVOID reserved) {
 	switch (reason) {
 	case DLL_PROCESS_ATTACH:
-		if (!imga::Initialize(*(HWND*)0xa377a8))
-			return FALSE;
-		imga::AddModule(new TestWindowModule());
+		CreateThread(0, 0, thread, 0, 0, 0);
 		break;
 	case DLL_PROCESS_DETACH:
 		imga::Destruct();
