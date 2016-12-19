@@ -12,7 +12,7 @@ class TestWindowModule : public imga::Module {
 
 
 DWORD WINAPI thread(LPVOID) {
-	if (!imga::Initialize(*(HWND*)0xa377a8))
+	if (!imga::Initialize())
 		return FALSE;
 	imga::AddModule(new TestWindowModule());
 	return 0;

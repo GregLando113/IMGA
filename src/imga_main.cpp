@@ -85,7 +85,7 @@ static LRESULT WINAPI imga_wndproc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lpa
 }
 
 bool
-imga::Initialize(void* hWnd, Context* ctx, DeviceFetcher_t fetcher) {
+imga::Initialize(Context* ctx, DeviceFetcher_t fetcher) {
 	if (ctx == nullptr)
 		g__ctx = new Context;
 	else
@@ -98,7 +98,11 @@ imga::Initialize(void* hWnd, Context* ctx, DeviceFetcher_t fetcher) {
 	else
 		dev = getd3d9device_default();
 
-	ImGui_ImplDX9_Init(hWnd, dev);
+	D3DDEVICE_CREATION_PARAMETERS cparams;
+	dev->GetCreationParameters(&cparams);
+	g__ctx->hwnd = cparams.hFocusWindow;
+
+	ImGui_ImplDX9_Init(cparams.hFocusWindow, dev);
 
 	DWORD oldprot;
 
@@ -118,7 +122,7 @@ imga::Initialize(void* hWnd, Context* ctx, DeviceFetcher_t fetcher) {
 
 
 
-	g__ctx->original_wndproc = (WNDPROC)SetWindowLongPtr((HWND)hWnd, GWL_WNDPROC, (LONG)imga_wndproc);
+	g__ctx->original_wndproc = (WNDPROC)SetWindowLongPtr((HWND)cparams.hFocusWindow, GWL_WNDPROC, (LONG)imga_wndproc);
 	
 	return true;
 }

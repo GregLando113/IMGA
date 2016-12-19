@@ -31,7 +31,7 @@ namespace imga {
 		HWND hwnd = nullptr;
 	};
 
-	bool Initialize(void* hWnd, Context* ctx = nullptr, DeviceFetcher_t fetcher = nullptr);
+	bool Initialize(Context* ctx = nullptr, DeviceFetcher_t fetcher = nullptr);
 	void AddModule(Module* m);
 	void RemoveModule(Module* m);
 	void Destruct();
