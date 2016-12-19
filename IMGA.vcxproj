@@ -25,7 +25,7 @@
     <ClCompile Include="imgui\imgui.cpp" />
     <ClCompile Include="imgui\imgui_draw.cpp" />
     <ClCompile Include="imgui\imgui_impl_dx9.cpp" />
-    <ClCompile Include="src\imga_default_fetcher.cpp" />
+    <ClCompile Include="src\imga_default_dx9.cpp" />
     <ClCompile Include="src\imga_main.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -2,7 +2,7 @@
 
 #include "..\imgui\imgui_impl_dx9.h"
 
-typedef HRESULT(WINAPI *d3d9Endscene_t)(IDirect3DDevice9* dev);
+typedef HRESULT(WINAPI *d3d9Present_t)(IDirect3DDevice9* pDev, CONST RECT* pSourceRect, CONST RECT* pDestRect, HWND hDestWindowOverride, CONST RGNDATA* pDirtyRegion);
 typedef HRESULT(WINAPI *d3d9Reset_t)(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params);
 
 extern IDirect3DDevice9* getd3d9device_default();
@@ -50,7 +50,7 @@ void call_onpostreset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params) {
 		g__ctx->modules[i]->OnPostReset(dev);
 }
 
-static HRESULT WINAPI imga_endscene(IDirect3DDevice9* dev)
+static HRESULT WINAPI imga_present(IDirect3DDevice9* dev, RECT* pSourceRect, RECT* pDestRect, HWND hDestWindowOverride, RGNDATA* pDirtyRegion)
 {
 	IDirect3DStateBlock9* state;
 	dev->CreateStateBlock(D3DSBT_ALL, &state);
@@ -61,7 +61,7 @@ static HRESULT WINAPI imga_endscene(IDirect3DDevice9* dev)
 	state->Apply();
 	state->Release();
 
-	return ((d3d9Endscene_t)g__ctx->vftable_original[42])(dev);
+	return ((d3d9Present_t)g__ctx->vftable_original[17])(dev, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
 }
 
 static HRESULT WINAPI imga_reset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params)
@@ -146,7 +146,7 @@ imga::Initialize(Context* ctx, DeviceFetcher_t fetcher) {
 
 	g__ctx->dev = dev;
 
-	g__ctx->vftable_fake[42] = imga_endscene;
+	g__ctx->vftable_fake[17] = imga_present;
 	g__ctx->vftable_fake[16] = imga_reset;
 
 
@@ -174,5 +174,5 @@ imga::Destruct() {
 		PageProtection p((void*)g__ctx->dev, sizeof(void*), PAGE_EXECUTE_READWRITE);
 		*(void***)g__ctx->dev = g__ctx->vftable_original; 
 	}
-	ImGui_ImplDX9_Shutdown();
+	//ImGui_ImplDX9_Shutdown();
 }
