@@ -23,12 +23,12 @@ namespace imga {
 
 	struct Context
 	{
-		IDirect3DDevice9* dev;
+		IDirect3DDevice9* dev = nullptr;
 		std::vector<Module*> modules;
-		void* vftable_fake[0x200];
-		void** vftable_original;
-		WNDPROC original_wndproc;
-		HWND hwnd;
+		void** vftable_fake = nullptr;
+		void** vftable_original = nullptr;
+		WNDPROC original_wndproc = nullptr;
+		HWND hwnd = nullptr;
 	};
 
 	bool Initialize(void* hWnd, Context* ctx = nullptr, DeviceFetcher_t fetcher = nullptr);

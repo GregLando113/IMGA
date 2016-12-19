@@ -2,13 +2,31 @@
 
 #include "..\imgui\imgui_impl_dx9.h"
 
-typedef HRESULT(WINAPI *d3d9Present_t)(IDirect3DDevice9* dev, RECT* pSourceRect, RECT* pDestRect, HWND hDestWindowOverride, RGNDATA* pDirtyRegion);
+typedef HRESULT(WINAPI *d3d9Endscene_t)(IDirect3DDevice9* dev);
 typedef HRESULT(WINAPI *d3d9Reset_t)(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params);
 
 extern IDirect3DDevice9* getd3d9device_default();
 
 imga::Context* g__ctx = nullptr;
 imga::Context* imga::get_ctx() { return g__ctx; }
+
+class PageProtection {
+public:
+	PageProtection(void* addr, DWORD len, DWORD prot):
+	addr_(addr),
+	len_(len),
+	prot_(prot){
+		VirtualProtect(addr_, len_, prot_, &old_);
+	}
+	~PageProtection() {
+		VirtualProtect(addr_, len_, old_, &old_);
+	}
+private:
+	void* addr_;
+	DWORD len_;
+	DWORD prot_;
+	DWORD old_;
+};
 
 void call_onframe(IDirect3DDevice9* dev) {
 	if (g__ctx->modules.empty())
@@ -32,18 +50,18 @@ void call_onpostreset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params) {
 		g__ctx->modules[i]->OnPostReset(dev);
 }
 
-static HRESULT WINAPI imga_present(IDirect3DDevice9* dev, RECT* pSourceRect, RECT* pDestRect, HWND hDestWindowOverride, RGNDATA* pDirtyRegion)
+static HRESULT WINAPI imga_endscene(IDirect3DDevice9* dev)
 {
 	IDirect3DStateBlock9* state;
 	dev->CreateStateBlock(D3DSBT_ALL, &state);
 
 	ImGui_ImplDX9_NewFrame();
 	call_onframe(dev);
-
+	ImGui::Render();
 	state->Apply();
 	state->Release();
 
-	return ((d3d9Present_t)g__ctx->vftable_original[17])(dev, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
+	return ((d3d9Endscene_t)g__ctx->vftable_original[42])(dev);
 }
 
 static HRESULT WINAPI imga_reset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params)
@@ -69,7 +87,7 @@ static LRESULT WINAPI imga_wndproc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lpa
 bool
 imga::Initialize(void* hWnd, Context* ctx, DeviceFetcher_t fetcher) {
 	if (ctx == nullptr)
-		g__ctx = new Context{ nullptr, std::vector<Module*>(4) };
+		g__ctx = new Context;
 	else
 		g__ctx = ctx;
 
@@ -81,11 +99,24 @@ imga::Initialize(void* hWnd, Context* ctx, DeviceFetcher_t fetcher) {
 		dev = getd3d9device_default();
 
 	ImGui_ImplDX9_Init(hWnd, dev);
-	memcpy(g__ctx->vftable_fake, *(void***)dev, 0x200 * sizeof(void*));
+
+	DWORD oldprot;
+
 	g__ctx->vftable_original = *(void***)dev;
-	*(void***)dev = g__ctx->vftable_fake;
+	g__ctx->vftable_fake = (void**)malloc(0x200 * sizeof(void*));
+	VirtualProtect(g__ctx->vftable_fake, sizeof(void*)*0x200, PAGE_EXECUTE_READWRITE, &oldprot);
+	memcpy(g__ctx->vftable_fake, g__ctx->vftable_original, 0x200 * sizeof(void*));
+	{
+		PageProtection p((void*)dev, sizeof(void*), PAGE_EXECUTE_READWRITE);
+		*(void***)dev = g__ctx->vftable_fake;
+	}
 
 	g__ctx->dev = dev;
+
+	g__ctx->vftable_fake[42] = imga_endscene;
+	g__ctx->vftable_fake[16] = imga_reset;
+
+
 
 	g__ctx->original_wndproc = (WNDPROC)SetWindowLongPtr((HWND)hWnd, GWL_WNDPROC, (LONG)imga_wndproc);
 	

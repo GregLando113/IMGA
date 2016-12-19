@@ -8,22 +8,36 @@ void* g__VEH;
 BYTE g__restore;
 BYTE* g__pEndScene;
 IDirect3DDevice9* g__pDev = nullptr;
+DWORD g__oldprot;
 
 
 #define INT3 0xCC
 
+
+static HRESULT WINAPI dx_endscene(IDirect3DDevice9* dev)
+{
+	g__pDev = dev;
+	return ((HRESULT(WINAPI*)(IDirect3DDevice9*))g__pEndScene)(dev);
+}
+
 static LONG WINAPI VEHHandler(PEXCEPTION_POINTERS exec)
 {
-	if (exec->ExceptionRecord->ExceptionAddress == g__pEndScene)
+	if (exec->ExceptionRecord->ExceptionCode != STATUS_ACCESS_VIOLATION && exec->ExceptionRecord->ExceptionCode != STATUS_SINGLE_STEP)
 	{
-		g__pDev = *(IDirect3DDevice9**)(exec->ContextRecord->Esp + 4);
-		DWORD oldprot;
-		VirtualProtect(g__pEndScene, 1, PAGE_EXECUTE_READWRITE, &oldprot);
-		*g__pEndScene = g__restore;
-		VirtualProtect(g__pEndScene, 1, oldprot, &oldprot);
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
+	if (exec->ExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP)
+	{
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
-	return EXCEPTION_CONTINUE_SEARCH;
+	//if (exec->ContextRecord->Eip == (DWORD)g__pEndScene)
+	//{
+		exec->ContextRecord->Eip = (DWORD)dx_endscene;
+		VirtualProtect(g__pEndScene, 1, g__oldprot, &g__oldprot);
+		exec->ContextRecord->EFlags |= 0x100;
+		return EXCEPTION_CONTINUE_EXECUTION;
+	//}
+	//return EXCEPTION_CONTINUE_SEARCH;
 }
 
 
@@ -37,8 +51,6 @@ IDirect3DDevice9* getd3d9device_default()
 	wc.lpszClassName = "d3dfetch";
 	RegisterClassExA(&wc);
 	g__hWnd = CreateWindowA("d3dfetch", 0, WS_OVERLAPPEDWINDOW, 100, 100, 300, 300, GetDesktopWindow(), 0, wc.hInstance, 0);
-
-	Sleep(10);
 
 	LPDIRECT3D9 pD3D = Direct3DCreate9(D3D_SDK_VERSION);
 	if (pD3D == nullptr) return NULL;
@@ -55,12 +67,10 @@ IDirect3DDevice9* getd3d9device_default()
 	pD3D->Release();
 
 	g__VEH = AddVectoredExceptionHandler(1, VEHHandler);
-	DWORD oldprot;
-	VirtualProtect(g__pEndScene, 1, PAGE_EXECUTE_READWRITE, &oldprot);
-	InterlockedExchange8((CHAR*)g__pEndScene, INT3);
-	VirtualProtect(g__pEndScene, 1, oldprot, &oldprot);
+	VirtualProtect(g__pEndScene, 1, PAGE_NOACCESS, &g__oldprot);
+
 	while (g__pDev == nullptr)
-		Sleep(5);
+		Sleep(1);
 	RemoveVectoredExceptionHandler(g__VEH);
 	DestroyWindow(g__hWnd);
 	UnregisterClassA("d3dfetch", wc.hInstance);
