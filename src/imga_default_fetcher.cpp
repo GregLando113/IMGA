@@ -32,7 +32,11 @@ static LONG WINAPI VEHHandler(PEXCEPTION_POINTERS exec)
 	}
 	//if (exec->ContextRecord->Eip == (DWORD)g__pEndScene)
 	//{
-		exec->ContextRecord->Eip = (DWORD)dx_endscene;
+#ifdef _WIN64
+	exec->ContextRecord->Rip = (DWORD64)dx_endscene;
+#else
+	exec->ContextRecord->Eip = (DWORD)dx_endscene;
+#endif
 		VirtualProtect(g__pEndScene, 1, g__oldprot, &g__oldprot);
 		exec->ContextRecord->EFlags |= 0x100;
 		return EXCEPTION_CONTINUE_EXECUTION;

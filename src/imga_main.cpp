@@ -121,9 +121,7 @@ imga::Initialize(Context* ctx, DeviceFetcher_t fetcher) {
 	g__ctx->vftable_fake[16] = imga_reset;
 
 
-
-	g__ctx->original_wndproc = (WNDPROC)SetWindowLongPtr((HWND)cparams.hFocusWindow, GWL_WNDPROC, (LONG)imga_wndproc);
-	
+	g__ctx->original_wndproc = (WNDPROC)SetWindowLongPtr((HWND)cparams.hFocusWindow, GWLP_WNDPROC, (LONG_PTR)imga_wndproc);
 	return true;
 }
 
@@ -141,7 +139,11 @@ imga::RemoveModule(Module* m) {
 
 void 
 imga::Destruct() {
-	SetWindowLongPtr((HWND)g__ctx->hwnd, GWL_WNDPROC, (LONG)g__ctx->original_wndproc);
-	*(void***)g__ctx->dev = g__ctx->vftable_original;
+	SetWindowLongPtr((HWND)g__ctx->hwnd, GWLP_WNDPROC, (LONG_PTR)g__ctx->original_wndproc);
+	if(g__ctx->dev)
+	{
+		PageProtection p((void*)g__ctx->dev, sizeof(void*), PAGE_EXECUTE_READWRITE);
+		*(void***)g__ctx->dev = g__ctx->vftable_original; 
+	}
 	ImGui_ImplDX9_Shutdown();
 }
