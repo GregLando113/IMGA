@@ -79,8 +79,37 @@ static HRESULT WINAPI imga_reset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* p
 extern IMGUI_API LRESULT ImGui_ImplDX9_WndProcHandler(HWND, UINT msg, WPARAM wParam, LPARAM lParam);
 static LRESULT WINAPI imga_wndproc(HWND wnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
-	if (ImGui_ImplDX9_WndProcHandler(wnd, msg, wparam, lparam))
-		return TRUE;
+	ImGui_ImplDX9_WndProcHandler(wnd, msg, wparam, lparam);
+
+	auto& io = ImGui::GetIO();
+	switch (msg) {
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
+	case WM_LBUTTONUP:
+	case WM_MOUSEMOVE:
+	case WM_LBUTTONDOWN:
+	case WM_LBUTTONDBLCLK:
+	case WM_MOUSEWHEEL:
+		if (io.WantCaptureMouse)
+			return true;
+		break;
+
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+	case WM_CHAR:
+	case WM_SYSCHAR:
+	case WM_IME_CHAR:
+	case WM_XBUTTONDOWN:
+	case WM_XBUTTONUP:
+	case WM_MBUTTONDOWN:
+	case WM_MBUTTONUP:
+		if (io.WantTextInput)
+			return true;
+		break;
+	}
+
 	return CallWindowProc(g__ctx->original_wndproc, wnd, msg, wparam, lparam);
 }
 
