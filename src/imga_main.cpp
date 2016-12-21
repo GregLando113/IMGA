@@ -66,8 +66,8 @@ static HRESULT WINAPI imga_present(IDirect3DDevice9* dev, RECT* pSourceRect, REC
 
 static HRESULT WINAPI imga_reset(IDirect3DDevice9* dev, D3DPRESENT_PARAMETERS* params)
 {
-	ImGui_ImplDX9_InvalidateDeviceObjects();
 	call_onprereset(dev, params);
+	ImGui_ImplDX9_InvalidateDeviceObjects();
 	HRESULT result = ((d3d9Reset_t)g__ctx->vftable_original[16])(dev, params);
 	if (result == D3D_OK) {
 		ImGui_ImplDX9_CreateDeviceObjects();
